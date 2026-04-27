@@ -25,9 +25,19 @@ UX shown while the AI Guide is generating a response. Two variants — **C-2 (St
 | **C-2 — Step cadence** | Users feel progress without the over-engineered determinism of a full checklist. Hiding upcoming steps keeps it from feeling like a system spec. |
 | **D — Rotating "warmth" copy** | Removes "how long until done" entirely. Trades perceived progress for emotional presence — bet is that a mental-health context rewards presence more than productivity cues. |
 
-**Both variants ship.** The user sees them alternated across consecutive AI turns (e.g., turn 1 → C-2, turn 2 → D, turn 3 → C-2, …). The rotation rule itself is an open question for engineering — see below.
+**Both variants ship.** The user sees them alternated across consecutive AI turns (e.g., turn 1 → C-2, turn 2 → D, turn 3 → C-2, …).
 
 ## Behavior spec
+
+### Timing principle
+
+**Total loading duration should align with average response latency.** This spec assumes latency = **11s** (current observed). Every timing value below — step cadence, caption rotation, when each phase holds — is tuned against that assumption.
+
+When latency improves, retune in this order:
+1. Update `TOTAL_DURATION_MS` in [`fixtures.ts`](./fixtures.ts) (currently `11_000`).
+2. C-2: keep step interval at 2000ms; the holding step (Step 4) absorbs the slack. If latency drops below ~6s, drop a step rather than compressing intervals.
+3. D: keep caption interval at 2000ms; p4 absorbs slack the same way. If latency drops below ~6s, drop a caption.
+4. Soft exit fade (200ms) does NOT scale — keep it constant.
 
 ### Variant C-2 — Step cadence
 
@@ -85,7 +95,6 @@ The current default fixture renders the loader for a flat 11s before the respons
 - **Variant C-2:** Step 4 keeps holding — its breathing-halo animation provides the natural "looping" visual. No further progression, no fake captions.
 - **Variant D:** p4 caption ("Hard days happen") stays on screen. Avatar ripples and sparks continue their loop animation indefinitely.
 - When the response actually arrives (whenever that is), the same 200ms fade-out → fade-in transition fires.
-- Open question: do we need an upper-bound escalation state ("still here", "this is taking a while", graceful timeout)? See questions below.
 
 ## Component API
 
