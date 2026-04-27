@@ -1,31 +1,35 @@
-# AI Guide — Loading UI
+# AI Guide — Loading states
 
 > Status: Handover ready | Owner: Hannah | Last updated: 2026-04-27
 
 **Live:** https://openup-speedlab.netlify.app/ai-guide-loading
-**Figma:** https://www.figma.com/design/A6wya1hopV9eNlHunRRjYs/-Exploration--OpenUp-AI-Companion
+**Figma:** https://www.figma.com/design/A6wya1hopV9eNlHunRRjYs/-Exploration--OpenUp-AI-Companion?node-id=5189-42810
 **Source:** [`src/experiments/ai-guide-loading/`](.)
 
 ## TL;DR
 
-Two design directions for masking AI Guide's high response latency (>5s, sometimes 11s+). Variant **C-2** shows a 4-step timed cadence with a hidden future. Variant **D** is an ambient companion with rippling rings and rotating captions, no progress indicator. Both run on a fixed timer independent of the model — they exit gracefully with a 200ms fade when the response actually arrives, regardless of which step or phase is active. Goal: reduce perceived wait time and give users a sense of presence during generation.
+UX shown while the AI Guide is generating a response. Two variants — **C-2 (Step cadence)** and **D (Rotating "warmth" copy)** — that **rotate per AI turn**, not picked between. Both run on a fixed timer independent of the model and exit gracefully with a 200ms fade when the response actually arrives.
+
+> ⚠️ **Scope priority:** if engineering scope is too tight to ship both variants, **Variant C-2 is the priority** — ship that first, add D in a follow-up.
 
 ## Context & problem
 
-AI Guide is currently struggling with high latency per output (>5s, with some responses taking up to 11s of generation). This makes the experience feel laggy and risks high drop-off at launch.
+**What this is:** the UX shown when the bot is generating a response.
 
-This workstream is the **design-side** response. The technical workstream (reducing actual latency) runs in parallel.
+**Why:** AI Guide currently has high latency per output (>5s, some responses up to 11s of generation). The experience feels laggy and risks drop-off at launch. This workstream explores design patterns that reduce perceived wait time and increase user sense of presence while the model generates.
 
 ## Design proposal
 
 | Variant | Hypothesis |
 |---|---|
-| **C-2** Step cadence with hidden future | Users feel progress without the over-engineered determinism of a full checklist. Hiding upcoming steps keeps it from feeling like a system spec. |
-| **D** Ambient companion | Removes "how long until done" entirely. Trades perceived progress for emotional presence — bet is that a mental-health context rewards presence more than productivity cues. |
+| **C-2 — Step cadence** | Users feel progress without the over-engineered determinism of a full checklist. Hiding upcoming steps keeps it from feeling like a system spec. |
+| **D — Rotating "warmth" copy** | Removes "how long until done" entirely. Trades perceived progress for emotional presence — bet is that a mental-health context rewards presence more than productivity cues. |
+
+**Both variants ship.** The user sees them alternated across consecutive AI turns (e.g., turn 1 → C-2, turn 2 → D, turn 3 → C-2, …). The rotation rule itself is an open question for engineering — see below.
 
 ## Behavior spec
 
-### Variant C-2 — Step cadence with hidden future
+### Variant C-2 — Step cadence
 
 Four sequential steps progressing on a fixed 2s timer. Only the completed and active steps show copy; future steps render as grey skeleton pills. Step 4 is visually distinct (hollow ring while pending, breathing green dot when active) so users see the endpoint before they reach it.
 
@@ -35,21 +39,26 @@ Four sequential steps progressing on a fixed 2s timer. Only the completed and ac
 | 2 | t=2000ms | "Thinking this through" |
 | 3 | t=4000ms | "Finding the right words" |
 | 4 | t=6000ms (holds) | "Almost with you" |
+| Final | response arrives | (loader fades out, response fades in) |
 
 A vertical gradient line (blue → green → dark green) fills 0% → 33% → 66% → 100% as steps advance, with a 1800ms ease so growth feels continuous between discrete steps.
 
-### Variant D — Ambient companion
+### Variant D — Rotating "warmth" copy
 
-A centered green avatar with three concentric rippling rings and inward-drifting sparks. A single caption rotates through 4 empathetic phrases on a fixed cadence.
+A centered green avatar with three concentric rippling rings (staggered 1.2s delays) and five sparks that travel inward into the avatar center. A single caption rotates through four empathetic phrases on a fixed 2s cadence. Loops on the last caption until response arrives.
 
 | Phase | Active at | Caption |
 |---|---|---|
 | p1 | t=0 | "Taking this in" |
-| p2 | t=2750ms | "This is allowed to be hard" |
-| p3 | t=5500ms | "Feelings don't always make sense" |
-| p4 | t=8250ms (holds) | "Hard days happen" |
+| p2 | t=2000ms | "This is allowed to be hard" |
+| p3 | t=4000ms | "Feelings don't always make sense" |
+| p4 | t=6000ms (holds) | "Hard days happen" |
+| Settle | 200ms before response | (fade out) |
+| Final | response arrives | (response fades in) |
 
-Caption swap: ~520ms cubic-bezier fade with a slight y-offset. Ring ripple: 3.6s loop, three concentric rings staggered -1.2s / -2.4s. Sparks: 2.8s loop with staggered delays.
+**Caption swap transition:** 200ms ease-out (opacity + slight y-offset).
+
+> Note: Figma spec says "rotate between 5 loading copy" but only lists 4. Proceeding with 4 — flag if a 5th copy is intended (TBD copy).
 
 ### Shared — exit transition
 
@@ -69,8 +78,9 @@ The current default fixture renders the loader for a flat 11s before the respons
 - Loader exits immediately when the response arrives — does **not** wait for remaining steps to complete.
 - Step transitions that would have fired after the exit are simply never scheduled — no flicker.
 - For Variant D: caption transitions past the response time are dropped.
+- Soft 200ms fade out → 200ms fade in.
 
-### Response arrives late (>11s)
+### Response arrives late (>8s for D, >11s for C-2)
 
 - **Variant C-2:** Step 4 keeps holding — its breathing-halo animation provides the natural "looping" visual. No further progression, no fake captions.
 - **Variant D:** p4 caption ("Hard days happen") stays on screen. Avatar ripples and sparks continue their loop animation indefinitely.
@@ -102,7 +112,7 @@ In production, `responseArrivedAt` is the elapsed time (ms) at which the respons
 | Param | Values | Purpose |
 |---|---|---|
 | `?v=` | `A`, `B`, `C`, `C2`, `D`, `E` | Switch variant in the speedlab toggle |
-| `?freeze=` | `0`, `1`, `2`, `3`, `final` | Freeze the variant at a specific step/phase. Skips the timer entirely. Used for static screenshots. |
+| `?freeze=` | `0`, `1`, `2`, `3`, `final` | Freeze the variant at a specific step/phase. Skips the timer entirely. |
 | `?response=` | milliseconds (e.g., `3000`, `20000`) | Override when the response arrives. Test early/late edge cases. |
 
 Try:
@@ -134,11 +144,11 @@ The prototype is bound to OpenUp End-User Design System tokens via `src/index.cs
 
 See [`docs/openup-ds-tokens.md`](../../../docs/openup-ds-tokens.md) for the full token reference.
 
-## Background ambience
+## Background ambience (shared)
 
 A soft layered radial gradient sits behind the composer in both variants, fixed to the viewport. Three layers:
 
-1. **Warm amber** glow — main, ellipse 60% × 45% at 50%, 94% from top, 65% center opacity
+1. **Warm amber** — main glow, ellipse 60% × 45% at 50%, 94% from top, 65% center opacity
 2. **Green tint** — left of composer, ellipse 42% × 32% at 28%, 90%, 30% center opacity
 3. **Honey accent** — right of composer, ellipse 38% × 28% at 72%, 92%, 40% center opacity
 
@@ -152,11 +162,15 @@ Implementation: [`AmbientOverlay.tsx`](./AmbientOverlay.tsx). Animations defined
 
 Front-loaded decisions that block design. Please respond before we lock direction.
 
-1. **What's the actual latency distribution?** We're designing around an 11s ceiling but need p50/p75/p95 for real prompts to know if the step cadence is tuned correctly. If p50 is closer to 3s, the 4-step C-2 is over-engineered.
+1. **Variant rotation logic** — designs say C-2 and D alternate per AI turn. Where does the rotation state live (per-conversation, per-session, persisted across sessions)? Does the user ever see the same variant twice in a row (e.g., if they reload mid-turn)?
 
-2. **Is there a streaming signal for "first token received"?** Both variants currently treat the response as a single arrival event. If we can stream, we should exit the loader the moment tokens start flowing — much bigger perceived-latency win than any animation choice.
+2. **What's the actual latency distribution?** We're designing around an 11s ceiling but need p50/p75/p95 for real prompts to know if the step cadence is tuned correctly. If p50 is closer to 3s, the 4-step C-2 is over-engineered.
 
-3. **What happens on timeout / error?** The prototype assumes a happy path. Need to know what state the loader should fall back to if the model errors or exceeds threshold. Related: should there be an upper-bound late-arrival escalation ("still here", "this is taking a while")?
+3. **Is there a streaming signal for "first token received"?** Both variants currently treat the response as a single arrival event. If we can stream, we should exit the loader the moment tokens start flowing — much bigger perceived-latency win than any animation choice.
+
+4. **What happens on timeout / error?** The prototype assumes a happy path. Need to know what state the loader should fall back to if the model errors or exceeds threshold. Related: should there be an upper-bound late-arrival escalation ("still here", "this is taking a while")?
+
+5. **5th D caption?** Figma spec says "rotate between 5 loading copy" but only 4 are listed. Confirm whether a 5th caption is intended (and what it should say) or whether the spec is a typo.
 
 Nice to know:
 - Can we log TTFT (time to first token), total generation time, and drop-off during loading?
@@ -167,11 +181,12 @@ Nice to know:
 
 - **Sound design** — both variants would benefit from subtle audio (soft tone, breath) but no audio is wired in the prototype. Decision: scope for v1 or later?
 - **Haptics on mobile** — the breath rhythm of D's avatar begs for haptic reinforcement; not yet wired.
-- **Error / fallback states** — see open question 3.
+- **Error / fallback states** — see open question 4.
 - **Variants A, B, E** in the speedlab toggle — earlier explorations kept around for comparison, not active proposals.
 
 ## Changelog
 
+- 2026-04-27 — Updated D timing to 2000ms per copy + 200ms ease-out caption swap (was 2750ms / 520ms cubic-bezier). Added "rotate per turn" requirement and C-2 priority note. Variant D renamed from "Ambient companion" to "Rotating warmth copy".
 - 2026-04-27 — Refactored to use OpenUp DS tokens; restructured into `experiments/` folder
 - 2026-04-25 — Added `responseArrivedAt` prop + edge case behavior (early/late arrival)
 - 2026-04-23 — Initial C-2 + D variants built; deployed to Netlify

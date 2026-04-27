@@ -290,7 +290,8 @@
 }
 
 .speedlab-caption-swap {
-  animation: speedlab-caption-swap 520ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  /* Variant D copy rotation: 200ms ease-out per spec */
+  animation: speedlab-caption-swap 200ms ease-out both;
 }
 
 /* Companion pose morphing used by variant L */

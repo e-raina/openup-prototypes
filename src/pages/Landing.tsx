@@ -17,9 +17,9 @@ type Experiment = {
 const EXPERIMENTS: Experiment[] = [
   {
     slug: "ai-guide-loading",
-    title: "AI Guide — Loading UI",
+    title: "AI Guide — Loading states",
     blurb:
-      "Two prototypes (C-2 step cadence + D ambient companion) for masking model latency. Includes early/late response edge cases.",
+      "Two variants (C-2 step cadence + D rotating warmth copy) that alternate per AI turn to mask model latency. Includes early/late response edge cases. C-2 is the priority if scope is tight.",
     status: "handover",
     owner: "Hannah",
     date: "2026-04",

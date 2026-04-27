@@ -5,12 +5,14 @@ import { LoaderAvatar } from "./LoaderAvatar";
 import { ResponseBlock } from "./elements";
 import { useTimeline, type Phase } from "./useTimeline";
 
-// Captions advance at fixed cadence. Settle/final fire when the response arrives.
+// Captions advance every 2000ms. Settle/final fire when the response arrives.
+// Spec note: Figma copy says "rotate between 5 loading copy" but only 4 are listed
+// — proceeding with 4. Open question for product.
 const CAPTION_PHASES: Phase[] = [
   { at: 0, id: "p1" },
-  { at: 2_750, id: "p2" },
-  { at: 5_500, id: "p3" },
-  { at: 8_250, id: "p4" },
+  { at: 2_000, id: "p2" },
+  { at: 4_000, id: "p3" },
+  { at: 6_000, id: "p4" },
 ];
 const SETTLE_FADE_MS = 200;
 
