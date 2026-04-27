@@ -157,36 +157,3 @@ All three pulse opacity (0.55 ↔ 1.0) on independent timings: 4.4s for amber, 5
 Reduced-motion fallback: hold each layer at midpoint (~0.78 opacity), no animation.
 
 Implementation: [`AmbientOverlay.tsx`](./AmbientOverlay.tsx). Animations defined in `src/index.css` (`speedlab-ambient-pulse`, `.speedlab-ambient-warm`, `.speedlab-ambient-green`).
-
-## Open questions for engineering
-
-Front-loaded decisions that block design. Please respond before we lock direction.
-
-1. **Variant rotation logic** — designs say C-2 and D alternate per AI turn. Where does the rotation state live (per-conversation, per-session, persisted across sessions)? Does the user ever see the same variant twice in a row (e.g., if they reload mid-turn)?
-
-2. **What's the actual latency distribution?** We're designing around an 11s ceiling but need p50/p75/p95 for real prompts to know if the step cadence is tuned correctly. If p50 is closer to 3s, the 4-step C-2 is over-engineered.
-
-3. **Is there a streaming signal for "first token received"?** Both variants currently treat the response as a single arrival event. If we can stream, we should exit the loader the moment tokens start flowing — much bigger perceived-latency win than any animation choice.
-
-4. **What happens on timeout / error?** The prototype assumes a happy path. Need to know what state the loader should fall back to if the model errors or exceeds threshold. Related: should there be an upper-bound late-arrival escalation ("still here", "this is taking a while")?
-
-5. **5th D caption?** Figma spec says "rotate between 5 loading copy" but only 4 are listed. Confirm whether a 5th caption is intended (and what it should say) or whether the spec is a typo.
-
-Nice to know:
-- Can we log TTFT (time to first token), total generation time, and drop-off during loading?
-- Mobile platform constraints (iOS / Android) — anything that rules out a variant?
-- If streaming, does partial output render cleanly or do we need to buffer until sentence boundaries?
-
-## Out of scope
-
-- **Sound design** — both variants would benefit from subtle audio (soft tone, breath) but no audio is wired in the prototype. Decision: scope for v1 or later?
-- **Haptics on mobile** — the breath rhythm of D's avatar begs for haptic reinforcement; not yet wired.
-- **Error / fallback states** — see open question 4.
-- **Variants A, B, E** in the speedlab toggle — earlier explorations kept around for comparison, not active proposals.
-
-## Changelog
-
-- 2026-04-27 — Updated D timing to 2000ms per copy + 200ms ease-out caption swap (was 2750ms / 520ms cubic-bezier). Added "rotate per turn" requirement and C-2 priority note. Variant D renamed from "Ambient companion" to "Rotating warmth copy".
-- 2026-04-27 — Refactored to use OpenUp DS tokens; restructured into `experiments/` folder
-- 2026-04-25 — Added `responseArrivedAt` prop + edge case behavior (early/late arrival)
-- 2026-04-23 — Initial C-2 + D variants built; deployed to Netlify
