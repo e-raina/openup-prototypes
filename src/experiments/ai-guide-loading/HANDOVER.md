@@ -31,7 +31,7 @@ UX shown while the AI Guide is generating a response. Two variants — **C-2 (St
 
 ### Timing principle
 
-**Total loading duration should align with average response latency.** This spec assumes latency = **11s** (current observed). Every timing value below — step cadence, caption rotation, when each phase holds — is tuned against that assumption.
+**Total loading duration should align with average response latency.** This spec assumes latency = **>6s** (current observed). Every timing value below — step cadence, caption rotation, when each phase holds — is tuned against that assumption.
 
 When latency improves, retune in this order:
 1. Update `TOTAL_DURATION_MS` in [`fixtures.ts`](./fixtures.ts) (currently `11_000`).
