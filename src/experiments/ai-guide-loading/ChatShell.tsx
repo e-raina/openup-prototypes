@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { ArrowUp } from "lucide-react";
+import { MobileNav } from "../../components/MobileNav";
 import { Navbar } from "../../components/Navbar";
 import { USER_PROMPT } from "./fixtures";
 
@@ -33,8 +34,9 @@ export function ChatShell({ sent, topBar, resetKey = 0, onSend, children }: Prop
 
   return (
     <div className="flex min-h-screen flex-col bg-bg-lvl1">
-      <Navbar />
-      {topBar}
+      <div className="hidden md:block"><Navbar /></div>
+      <div className="md:hidden"><MobileNav /></div>
+      <div className="hidden md:block">{topBar}</div>
 
       <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col px-4 pt-4">
         <div className="mx-auto flex w-full max-w-[559px] flex-1 flex-col gap-6">
